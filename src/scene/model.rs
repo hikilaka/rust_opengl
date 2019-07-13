@@ -3,7 +3,7 @@ use crate::rsgl::Bindable;
 use crate::scene::{Camera, Mesh};
 
 use gl::types::GLsizei;
-use nalgebra::{Isometry3, Translation3, UnitQuaternion, Vector3};
+use nalgebra::{Isometry3, Rotation3, Translation3, UnitQuaternion, Vector3};
 
 pub enum RotationAxis {
     X,
@@ -37,14 +37,7 @@ impl Model {
     }
 
     pub fn rotate(&mut self, radians: f32, axis: RotationAxis) {
-        let (mut roll, mut pitch, mut yaw) = self.rotation.euler_angles();
-        match axis {
-            RotationAxis::X => roll = radians,
-            RotationAxis::Y => pitch = radians,
-            RotationAxis::Z => yaw = radians,
-        }
-        self.rotation = UnitQuaternion::from_euler_angles(roll, pitch, yaw);
-        self.rotation.renormalize();
+        self.rotation = UnitQuaternion::new(axis.value() * radians);
     }
 
     pub fn translate(&mut self, translation: &Translation3<f32>) {

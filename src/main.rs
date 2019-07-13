@@ -95,12 +95,12 @@ fn main() {
         let cam_x = (instant.elapsed().as_millis() as f32 / 1400.0).sin() * radius;
         let cam_z = (instant.elapsed().as_millis() as f32 / 1000.0).cos() * radius;
 
-        //camera.set_position(na::Point3::new(cam_x, 0.9, cam_z));
+        camera.set_position(na::Point3::new(cam_x, 0.9, cam_z));
 
         for model in models.iter_mut() {
             model.rotate(
                 std::f32::consts::FRAC_PI_3 * (instant.elapsed().as_millis() as f32 / 1000.0),
-                scene::RotationAxis::Y,
+                scene::RotationAxis::Z,
             );
             model.render(&camera, &program);
         }
