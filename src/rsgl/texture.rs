@@ -1,10 +1,10 @@
 use crate::rsgl::{Bindable, Deletable};
 use gl;
 use gl::types::GLuint;
-
 use image;
 use image::GenericImageView;
 use std::ops::Drop;
+
 pub struct Texture {
     handle: GLuint,
 }

@@ -1,7 +1,7 @@
 use crate::glsl::{GLSLError, GLSLResult, Shader};
 use crate::rsgl::{Bindable, Deletable};
 use gl::types::*;
-use nalgebra_glm as na;
+use nalgebra::Matrix4;
 use std::ops::Drop;
 
 pub struct Program {
@@ -140,15 +140,10 @@ impl Program {
         Ok(())
     }
 
-    pub fn set_uniform_m4(&self, name: &str, matrix: &na::Mat4) -> GLSLResult<()> {
+    pub fn set_matrix(&self, name: &str, matrix: &Matrix4<f32>) -> GLSLResult<()> {
         unsafe {
             let location = self.find_uniform(name)?;
-            gl::UniformMatrix4fv(
-                location,
-                1,
-                gl::FALSE,
-                na::value_ptr(matrix).as_ptr() as *const f32,
-            );
+            gl::UniformMatrix4fv(location, 1, gl::FALSE, matrix.as_ptr() as *const f32);
         }
         Ok(())
     }

@@ -1,8 +1,9 @@
 use crate::rsgl::{Bindable, Deletable, Enum};
 use gl;
-use gl::types::{GLenum, GLuint, GLsizeiptr};
+use gl::types::{GLenum, GLsizeiptr, GLuint};
 use std::ops::Drop;
 
+#[derive(Clone)]
 pub enum BufferType {
     Array,
     ElementArray,
@@ -33,6 +34,7 @@ impl Enum for BufferUsage {
     }
 }
 
+#[derive(Clone)]
 pub struct Buffer {
     handle: GLuint,
     kind: BufferType,

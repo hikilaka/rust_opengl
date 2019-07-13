@@ -1,28 +1,16 @@
+pub mod cube;
 pub mod glsl;
 pub mod rsgl;
+pub mod scene;
 pub mod util;
 
 use gl;
-use nalgebra_glm as na;
-use rsgl::{Bindable, Buffer, BufferType, BufferUsage, Texture, VertexArray};
+use nalgebra as na;
+use rsgl::{Bindable, Texture};
 use sdl2;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 650;
-
-const VERTICIES: [gl::types::GLfloat; 180] = [
-    -0.5, -0.5, -0.5, 0.0, 0.0, 0.5, -0.5, -0.5, 1.0, 0.0, 0.5, 0.5, -0.5, 1.0, 1.0, 0.5, 0.5,
-    -0.5, 1.0, 1.0, -0.5, 0.5, -0.5, 0.0, 1.0, -0.5, -0.5, -0.5, 0.0, 0.0, -0.5, -0.5, 0.5, 0.0,
-    0.0, 0.5, -0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 1.0, -0.5, 0.5,
-    0.5, 0.0, 1.0, -0.5, -0.5, 0.5, 0.0, 0.0, -0.5, 0.5, 0.5, 1.0, 0.0, -0.5, 0.5, -0.5, 1.0, 1.0,
-    -0.5, -0.5, -0.5, 0.0, 1.0, -0.5, -0.5, -0.5, 0.0, 1.0, -0.5, -0.5, 0.5, 0.0, 0.0, -0.5, 0.5,
-    0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5, -0.5, 1.0, 1.0, 0.5, -0.5, -0.5, 0.0, 1.0,
-    0.5, -0.5, -0.5, 0.0, 1.0, 0.5, -0.5, 0.5, 0.0, 0.0, 0.5, 0.5, 0.5, 1.0, 0.0, -0.5, -0.5, -0.5,
-    0.0, 1.0, 0.5, -0.5, -0.5, 1.0, 1.0, 0.5, -0.5, 0.5, 1.0, 0.0, 0.5, -0.5, 0.5, 1.0, 0.0, -0.5,
-    -0.5, 0.5, 0.0, 0.0, -0.5, -0.5, -0.5, 0.0, 1.0, -0.5, 0.5, -0.5, 0.0, 1.0, 0.5, 0.5, -0.5,
-    1.0, 1.0, 0.5, 0.5, 0.5, 1.0, 0.0, 0.5, 0.5, 0.5, 1.0, 0.0, -0.5, 0.5, 0.5, 0.0, 0.0, -0.5,
-    0.5, -0.5, 0.0, 1.0,
-];
 
 fn main() {
     use std::os::raw::c_void;
@@ -35,11 +23,7 @@ fn main() {
     gl_attr.set_context_version(3, 2);
     gl_attr.set_double_buffer(true);
 
-    let window = video
-        .window("Rust OpenGL", WIDTH, HEIGHT)
-        .opengl()
-        .resizable()
-        .build();
+    let window = video.window("Rust OpenGL", WIDTH, HEIGHT).opengl().build();
 
     let mut window = window.expect("Error creating window: {}");
 
@@ -56,51 +40,39 @@ fn main() {
     let _gl = gl::load_with(load_func);
 
     let mut event_pump = sdl.event_pump().expect("Error creating event pump");
-    let program = util::load_program();
-
-    let tex1 = Texture::new("release/container.jpg");
-    let tex2 = Texture::new("release/awesomeface.png");
-
-    let vert_array = VertexArray::new();
-    let vert_buffer = Buffer::new(BufferType::Array);
-
-    bind!(vert_array, {
-        vert_buffer.bind_data(BufferUsage::Static, &VERTICIES);
-
-        program.bind();
-
-        let _ = program.set_data_loc("out_color");
-        let _ = program.set_attribute("vert_pos", 3, 5, 0);
-        let _ = program.set_attribute("tex_coord", 2, 5, 3);
-        let _ = program.set_uniform1i("tex1", 0);
-        let _ = program.set_uniform1i("tex2", 1);
-    });
 
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
     }
 
-    let cube_locs = [
-        na::vec3(0.0, 0.0, 0.0),
-        na::vec3(2.0, 5.0, -15.0),
-        na::vec3(-1.5, -2.2, -2.5),
-        na::vec3(-3.8, -2.0, -12.3),
-        na::vec3(2.4, -0.4, -3.5),
-        na::vec3(-1.7, 3.0, -7.5),
-        na::vec3(1.3, -2.0, -2.5),
-        na::vec3(1.5, 2.0, -2.5),
-        na::vec3(1.5, 0.2, -1.5),
-        na::vec3(-1.3, 1.0, -1.5),
-    ];
+    let program = util::load_program();
+    let tex1 = Texture::new("release/container.jpg");
+    let tex2 = Texture::new("release/awesomeface.png");
+
+    let mut camera = scene::Camera::new(
+        WIDTH as f32 / HEIGHT as f32,
+        std::f32::consts::FRAC_PI_4,
+        0.1,
+        100.0,
+    );
+
+    camera.look_at(na::Point3::origin());
+    camera.set_position(na::Point3::new(0.0, 0.9, -3.0));
+
+    let verts = cube::get_verts();
+    let tex = cube::get_tex();
+    let mesh = scene::Mesh::new(&verts, &tex);
+
+    let mut models: Vec<scene::Model> = cube::get_locs()
+        .iter()
+        .map(|t| {
+            let mut m = scene::Model::new(mesh.clone());
+            m.translate(&t);
+            m
+        })
+        .collect();
 
     let instant = std::time::Instant::now();
-
-    let cam_pos = na::vec3(0.0, 0.0, 0.3);
-    let cam_target = na::vec3(0.0, 0.0, 0.0);
-    let cam_dir = na::normalize(&(cam_pos - cam_target));
-    let up = na::vec3(0.0, 1.0, 0.0);
-    let cam_right = na::normalize(&up.cross(&cam_dir));
-    let cam_up = cam_dir.cross(&cam_right);
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -119,31 +91,18 @@ fn main() {
         tex2.activate_as(1);
         tex2.bind();
 
-        let fov = na::radians(&na::vec1(45.0))[0];
-        let proj = na::perspective(WIDTH as f32 / HEIGHT as f32, fov, 0.1, 100.0);
-
-        // let view: na::Mat4 = na::translate(&na::identity(), &na::vec3(0.0, 0.0, -3.0));
         let radius = 10.0;
-        let cam_x = (instant.elapsed().as_millis() as f32 / 1000.0).sin() * radius;
+        let cam_x = (instant.elapsed().as_millis() as f32 / 1400.0).sin() * radius;
         let cam_z = (instant.elapsed().as_millis() as f32 / 1000.0).cos() * radius;
-        let view = na::look_at(
-            &na::vec3(cam_x, 0.0, cam_z),
-            &na::vec3(0.0, 0.0, 0.0),
-            &na::vec3(0.0, 1.0, 0.0),
-        );
 
-        let _ = program.set_uniform_m4("projection", &proj);
-        let _ = program.set_uniform_m4("view", &view);
+        //camera.set_position(na::Point3::new(cam_x, 0.9, cam_z));
 
-        for (i, cube) in cube_locs.iter().enumerate() {
-            let rotation = na::radians(&na::vec1(20.0 * i as f32))[0];
-            let mut model = na::translate(&na::identity(), &cube);
-            model = na::rotate(&model, rotation, &na::vec3(1.0, 0.3, 0.5));
-            let _ = program.set_uniform_m4("model", &model);
-
-            bind!(vert_array, unsafe {
-                gl::DrawArrays(gl::TRIANGLES, 0, 36);
-            });
+        for model in models.iter_mut() {
+            model.rotate(
+                std::f32::consts::FRAC_PI_3 * (instant.elapsed().as_millis() as f32 / 1000.0),
+                scene::RotationAxis::Y,
+            );
+            model.render(&camera, &program);
         }
 
         window.gl_swap_window();

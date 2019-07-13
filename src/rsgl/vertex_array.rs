@@ -3,6 +3,7 @@ use gl;
 use gl::types::GLuint;
 use std::ops::Drop;
 
+#[derive(Clone)]
 pub struct VertexArray {
     handle: GLuint,
 }
